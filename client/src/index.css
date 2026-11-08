@@ -1,0 +1,279 @@
+@import 'tailwindcss';
+
+/*
+  Layout by screen size. From iPad mini width (744px) up, Steps 1, 2 and 3 sit side by side; only phones stack them.
+  tab-narrow: 744–1023px (portrait iPads, small windows): three equal columns. From 1024px the lg/xl columns take over.
+  tab:        744–1439px: compact bubble sizes for the narrower columns.
+  fit:        744px+ wide and 560px+ tall (tablets, laptops, desktops): the whole page fits one screen, no scrolling;
+              each column fills the height, the bubbles scale down if the field is short.
+  short:      fit, but at most 820px tall (laptops in a browser window): tighter rows and cards.
+  tiny:       fit, at most 660px tall: also hides the Step 2 "Most / Least important" captions.
+  tab-land:   landscape tablets and small laptops: column widths (unchanged).
+  fit has no maximum width: wide desktops get the one-screen layout too. (Custom variants win over sm/md/lg/xl.)
+*/
+@custom-variant tab-narrow (@media (min-width: 744px) and (max-width: 1023.98px));
+@custom-variant tab (@media (min-width: 744px) and (max-width: 1439.98px));
+@custom-variant fit (@media (min-width: 744px) and (min-height: 560px));
+@custom-variant short (@media (min-width: 744px) and (min-height: 560px) and (max-height: 820px));
+@custom-variant tiny (@media (min-width: 744px) and (min-height: 560px) and (max-height: 660px));
+@custom-variant tab-land (@media (min-width: 1024px) and (max-width: 1439.98px) and (orientation: landscape) and (min-height: 600px));
+
+/*
+  PouchWale tokens (from .claude/skills/pouchwale-design-system/colors_and_type.css)
+  exposed to Tailwind as utilities: bg-pw-pink, text-ink, font-display, shadow-stamp …
+*/
+@theme {
+  --color-pw-yellow: #f3e33f;
+  --color-pw-pink: #fe4587;
+  --color-pw-blue: #149eda;
+  --color-pw-orange: #ff561d;
+
+  --color-pw-yellow-tint: #faf1a6;
+  --color-pw-pink-tint: #ffb5d1;
+  --color-pw-blue-tint: #9cd9ee;
+  --color-pw-orange-tint: #ffb59a;
+
+  --color-pw-yellow-shade: #d9c92a;
+  --color-pw-pink-shade: #d52a6c;
+  --color-pw-blue-shade: #0e7bab;
+  --color-pw-orange-shade: #db3e0b;
+
+  --color-ink: #111111;
+  --color-ink-2: #4a4a4a;
+  --color-ink-3: #8a8a8a;
+  --color-paper: #ffffff;
+
+  --font-display: 'Mada', 'Archivo Black', system-ui, sans-serif;
+  --font-body: 'Mulish', 'Inter', system-ui, sans-serif;
+
+  --shadow-stamp-sm: 2px 2px 0 0 #111111;
+  --shadow-stamp: 4px 4px 0 0 #111111;
+  --shadow-stamp-lg: 8px 8px 0 0 #111111;
+  --shadow-pop: 6px 6px 0 0 #fe4587;
+
+  --ease-pw: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    /* No double-tap zoom: taps respond instantly. */
+    touch-action: manipulation;
+  }
+  /* Exhibition kiosk (full screen / Home Screen / ?kiosk=1): no pinch-zoom, no pull-to-refresh or rubber-banding. */
+  html.kiosk,
+  html.kiosk body {
+    overscroll-behavior: none;
+    touch-action: pan-x pan-y;
+  }
+  /* Intro hand-off: the Step 1 bubbles stay hidden until the intro's bubbles land on them. */
+  html.intro-handoff [data-body] {
+    visibility: hidden;
+  }
+  /* "Your pouch is ready": a bubble that has burst into confetti stays hidden until it pops back. */
+  [data-body][data-celebrate-hide] {
+    visibility: hidden;
+  }
+  /* Ghost-hand demo: the bubble it "picks up" stays as a faint ghost, just like in a real drag. */
+  [data-body][data-demo-ghost] [data-bubble-face] {
+    opacity: 0.22;
+  }
+  /* No long-press callouts (save image, copy link) on touch screens. */
+  img,
+  a,
+  button {
+    -webkit-touch-callout: none;
+  }
+  input,
+  textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  /* iPad/iPhone Safari zooms into fields with text under 16px. */
+  @media (pointer: coarse) {
+    input,
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+  }
+  body {
+    @apply bg-paper text-ink font-body antialiased;
+    font-weight: 500;
+  }
+  /*
+    No visible scrollbars anywhere (customer page and admin, laptop, tablet, iPad). Scrolling itself is untouched:
+    touch, mouse wheel, trackpad and keyboard all still scroll the page and the columns.
+  */
+  * {
+    scrollbar-width: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-pw-pink);
+    outline-offset: 2px;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
+
+@layer components {
+  /* Display headline: heavy, uppercase, tight. */
+  .pw-display {
+    font-family: var(--font-display);
+    font-weight: 900;
+    line-height: 0.92;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+  }
+  .pw-eyebrow {
+    font-family: var(--font-body);
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Buttons: pill, ink border, stamp shadow; press = sink into shadow. */
+  .pw-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border-2 border-ink px-4 py-2 text-sm font-extrabold transition-[transform,box-shadow,background-color] duration-[140ms];
+    box-shadow: var(--shadow-stamp-sm);
+  }
+  .pw-btn:active:not(:disabled) {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+  }
+  .pw-btn:disabled {
+    @apply opacity-50;
+  }
+  .pw-btn-primary {
+    @apply bg-ink text-paper hover:bg-pw-pink;
+  }
+  .pw-btn-ghost {
+    @apply bg-paper text-ink hover:bg-pw-yellow;
+  }
+  .pw-btn-quiet {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold whitespace-nowrap text-ink-2 transition-colors hover:bg-ink/5 hover:text-ink;
+  }
+  /* Finger-sized targets on touch screens (≥40–44px). */
+  @media (pointer: coarse) {
+    .pw-btn {
+      min-height: 44px;
+    }
+    .pw-btn-quiet {
+      min-height: 40px;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+  }
+
+  .pw-input {
+    @apply w-full rounded-xl border-2 border-ink bg-paper px-3 py-2 text-sm font-semibold text-ink outline-none placeholder:text-ink-3 focus:border-pw-pink;
+  }
+  .pw-label {
+    @apply mb-1 block text-xs font-extrabold uppercase tracking-wide text-ink-2;
+  }
+}
+
+/*
+  Motion system: the same 3 durations as client/src/motion.ts. Buttons use the fast one and the brand ease.
+*/
+:root {
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 400ms;
+}
+.pw-btn,
+.pw-btn-quiet {
+  transition-duration: var(--dur-fast);
+  transition-timing-function: var(--ease-pw);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/*
+  Header logo (HeaderLogo.tsx): the pink logo file is only the shape (a mask); the colour underneath cycles
+  pink → blue → orange → pink. 12s loop: each brand colour holds 2.5s (exact: #fe4587, #149eda, #ff561d), then blends
+  into the next over 1.5s. The blends go round the colour wheel (OKLCH, shortest way: pink→magenta→violet→blue,
+  blue→violet→magenta→pink→orange, orange→coral→pink), so every in-between shade stays bright: a straight mix of
+  blue and orange would pass through grey. Fine steps with eased spacing and linear timing between them: smooth,
+  and the same in every browser. Generated from the brand colours; see the stops below.
+*/
+.pw-logo-cycle {
+  background-color: color(srgb 0.99608 0.27059 0.52941);
+  -webkit-mask: url('/logo-pink.png') center / contain no-repeat;
+  mask: url('/logo-pink.png') center / contain no-repeat;
+  animation: pw-logo-cycle 12s linear infinite;
+}
+@keyframes pw-logo-cycle {
+  0% { background-color: color(srgb 0.99608 0.27059 0.52941); } /* pink #fe4587 */
+  20.833% { background-color: color(srgb 0.99608 0.27059 0.52941); } /* pink holds */
+  21.666% { background-color: oklch(0.6759 0.2228 2.64); }
+  22.5% { background-color: oklch(0.6754 0.22 358.48); }
+  23.333% { background-color: oklch(0.6746 0.2155 351.76); }
+  24.166% { background-color: oklch(0.6736 0.2094 342.76); }
+  25% { background-color: oklch(0.6723 0.2021 331.88); }
+  25.833% { background-color: oklch(0.6709 0.1938 319.59); }
+  26.666% { background-color: oklch(0.6693 0.185 306.43); }
+  27.5% { background-color: oklch(0.6678 0.1759 292.98); }
+  28.333% { background-color: oklch(0.6662 0.167 279.82); }
+  29.166% { background-color: oklch(0.6648 0.1587 267.54); }
+  30% { background-color: oklch(0.6635 0.1514 256.65); }
+  30.833% { background-color: oklch(0.6625 0.1453 247.65); }
+  31.666% { background-color: oklch(0.6617 0.1408 240.93); }
+  32.5% { background-color: oklch(0.6612 0.138 236.77); }
+  33.333% { background-color: color(srgb 0.07843 0.61961 0.8549); } /* blue #149eda */
+  54.167% { background-color: color(srgb 0.07843 0.61961 0.8549); } /* blue holds */
+  55% { background-color: oklch(0.6612 0.1379 237.13); }
+  55.834% { background-color: oklch(0.6617 0.1404 242.35); }
+  56.667% { background-color: oklch(0.6626 0.1444 250.79); }
+  57.5% { background-color: oklch(0.6638 0.1498 262.09); }
+  58.334% { background-color: oklch(0.6652 0.1564 275.75); }
+  59.167% { background-color: oklch(0.6668 0.1637 291.18); }
+  60% { background-color: oklch(0.6685 0.1716 307.7); }
+  60.834% { background-color: oklch(0.6703 0.1797 324.58); }
+  61.667% { background-color: oklch(0.672 0.1876 341.1); }
+  62.5% { background-color: oklch(0.6736 0.1949 356.53); }
+  63.334% { background-color: oklch(0.675 0.2015 10.19); }
+  64.167% { background-color: oklch(0.6762 0.2069 21.49); }
+  65% { background-color: oklch(0.6771 0.2109 29.93); }
+  65.834% { background-color: oklch(0.6776 0.2134 35.15); }
+  66.667% { background-color: color(srgb 1 0.33725 0.11373); } /* orange #ff561d */
+  87.5% { background-color: color(srgb 1 0.33725 0.11373); } /* orange holds */
+  88.333% { background-color: oklch(0.6778 0.2143 36.55); }
+  89.167% { background-color: oklch(0.6778 0.2147 35.49); }
+  90% { background-color: oklch(0.6777 0.2152 33.77); }
+  90.833% { background-color: oklch(0.6775 0.2158 31.48); }
+  91.667% { background-color: oklch(0.6774 0.2166 28.7); }
+  92.5% { background-color: oklch(0.6772 0.2175 25.56); }
+  93.333% { background-color: oklch(0.677 0.2185 22.2); }
+  94.167% { background-color: oklch(0.6769 0.2195 18.76); }
+  95% { background-color: oklch(0.6767 0.2205 15.4); }
+  95.833% { background-color: oklch(0.6765 0.2214 12.26); }
+  96.667% { background-color: oklch(0.6764 0.2222 9.48); }
+  97.5% { background-color: oklch(0.6763 0.2229 7.18); }
+  98.333% { background-color: oklch(0.6762 0.2234 5.47); }
+  99.167% { background-color: oklch(0.6761 0.2237 4.41); }
+  100% { background-color: color(srgb 0.99608 0.27059 0.52941); } /* pink again */
+}
+/* Reduced motion: plain pink (the rule above would otherwise turn the loop into a fast flicker). */
+@media (prefers-reduced-motion: reduce) {
+  .pw-logo-cycle {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(EDITOR)
+  /// Bumped on every password change: sessions signed with an older version stop working.
+  tokenVersion Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+/// A product requirement shown to customers as a bubble.
+model Parameter {
+  id            String             @id @default(cuid())
+  key           String             @unique
+  name          String
+  description   String?
+  category      String
+  size          Int                @default(2)
+  color         String
+  sortOrder     Int                @default(0)
+  active        Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  /// How each recommendation option is rated on this topic.
+  optionRatings SuggestionRating[]
+
+  @@index([active, sortOrder])
+}
+
+/// A recommendation parameter, e.g. "Print Type". sortOrder = display order (1 = first).
+model SuggestionParameter {
+  id          String             @id @default(cuid())
+  key         String             @unique
+  name        String
+  description String?
+  sortOrder   Int
+  enabled     Boolean            @default(true)
+  options     SuggestionOption[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+/// One option of a recommendation parameter, e.g. "Digital Printing".
+model SuggestionOption {
+  id          String              @id @default(cuid())
+  parameterId String
+  parameter   SuggestionParameter @relation(fields: [parameterId], references: [id], onDelete: Cascade)
+  label       String
+  description String?
+  sortOrder   Int
+  enabled     Boolean             @default(true)
+  /// Its 1–5 star rating per priority topic, with the reason customers see.
+  ratings     SuggestionRating[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@unique([parameterId, label])
+  @@index([parameterId, sortOrder])
+}
+
+/// Idle logo mode (singleton row, id = 1): idle bubbles gather and form the PouchWale logo.
+model IdleLogoSettings {
+  id              Int      @id @default(1)
+  enabled         Boolean  @default(true)
+  /// Minutes without interaction before the logo forms
+  idleMinutes     Float    @default(1)
+  /// Seconds the bubbles take to gather and form the logo
+  formSeconds     Float    @default(3)
+  /// slow | normal | fast — scatter and return transitions
+  transitionSpeed String   @default("normal")
+  /// Seconds the logo stays visible; 0 = until someone touches
+  holdSeconds     Int      @default(20)
+  updatedAt       DateTime @updatedAt
+}
+
+model IntroSettings {
+  id        Int      @id @default(1)
+  style     String   @default("rotate")
+  updatedAt DateTime @updatedAt
+}
+
+/// How well a recommendation option serves a priority topic (1–5 stars), and why (shown to customers).
+model SuggestionRating {
+  optionId String
+  option   SuggestionOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  topicKey String
+  topic    Parameter        @relation(fields: [topicKey], references: [key], onDelete: Cascade, onUpdate: Cascade)
+  stars    Int
+  reason   String?
+
+  @@id([optionId, topicKey])
+  @@index([topicKey])
+}

@@ -1,0 +1,15 @@
+# Line endings: everything in the repository uses LF (Render builds on Linux); Windows batch files need CRLF.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets: never touched.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.mp4 binary
+*.woff binary
+*.woff2 binary
